@@ -1,0 +1,49 @@
+name: Build LaTeX PDF
+
+on:
+  push:
+    paths:
+      - 'output/**.tex'
+  workflow_dispatch:
+    inputs:
+      tex_file:
+        description: 'TEX fayl nomi'
+        required: true
+        default: 'journal.tex'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-full
+
+      - name: Build PDF
+        run: |
+          cd output
+          for f in *.tex; do
+            pdflatex -interaction=nonstopmode "$f" || true
+            pdflatex -interaction=nonstopmode "$f" || true
+          done
+
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-pdf
+          path: output/*.pdf
+          retention-days: 30
+
+      - name: Commit PDF back to repo
+        run: |
+          git config user.name "LaTeX Journal AI"
+          git config user.email "ai@latex-journal.com"
+          git add output/*.pdf || true
+          git diff --staged --quiet || git commit -m "📄 PDF generated automatically"
+          git push || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
